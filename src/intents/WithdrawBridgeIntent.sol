@@ -17,14 +17,11 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
 
     IOFTWithdrawWrapper public immutable IOFT_BRIDGE;
 
-    /**
-     * @notice The maximum fee for a token for single withdraw
-     */
+    /// @notice The maximum fee for a token for single withdraw
     mapping(address user => mapping(address token => uint256 maxFee)) public maxFee;
 
-    /**
-     * @notice The valid recipients for the withdraw intent
-     */
+    
+    /// @notice The valid recipients for the withdraw intent
     mapping(address user => mapping(address recipient => bool isValid)) public validRecipients;
 
     error InvalidRecipient();
@@ -45,7 +42,7 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
 
     event MaxFeeSet(address indexed user, address indexed token, uint256 maxFee);
 
-    event ValidRecipientSet(address indexed user, address indexed recipient);
+    event ValidRecipientSet(address indexed user, address indexed recipient, bool isValid);
 
     constructor(ISocketWithdrawWrapper _socketBridge, IOFTWithdrawWrapper _iOFTBridge) {
         SOCKET_BRIDGE = _socketBridge;
@@ -133,9 +130,9 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
      * @notice Set the valid recipient for all withdraw intent
      * @param recipient The recipient address
      */
-    function setValidRecipient(address recipient) external {
-        validRecipients[msg.sender][recipient] = true;
+    function setValidRecipient(address recipient, bool isValid) external {
+        validRecipients[msg.sender][recipient] = isValid;
 
-        emit ValidRecipientSet(msg.sender, recipient);
+        emit ValidRecipientSet(msg.sender, recipient, isValid);
     }
 }
