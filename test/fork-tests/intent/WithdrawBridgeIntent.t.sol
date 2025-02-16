@@ -18,7 +18,6 @@ import {ILightAccount} from "src/interfaces/ILightAccount.sol";
 contract FORK_LYRA_WithdrawBridgeIntent is Test {
     
     address public weETH = address(0x7B35b4c05a90Ea5f311AeC815BE4148b446a68a2);
-
     address public drv = address(0x2EE0fd70756EDC663AcC9676658A1497C247693A);
 
     // OFT withdraw wrapper
@@ -50,6 +49,7 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
         bridgeIntent = new WithdrawBridgeIntent(socketBridge, oftBridge);
 
         deal(weETH, scw, 10 ether);
+        deal(drv, scw, 1000 ether);
 
         // set executor as intent executor
         bridgeIntent.setIntentExecutor(executor, true);
@@ -58,9 +58,12 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
         // scw approves bridgeIntent to spend weETH
         vm.startPrank(scw);
         IERC20(weETH).approve(address(bridgeIntent), type(uint256).max);
+        IERC20(drv).approve(address(bridgeIntent), type(uint256).max);
 
         // scw set max fee + recipient on bridgeintent
         bridgeIntent.setMaxFee(weETH, 0.01 ether);
+        bridgeIntent.setMaxFee(drv, 5 ether); // 5 DRV
+
         bridgeIntent.setValidRecipient(validRecipient, true);
 
         vm.stopPrank();
@@ -89,6 +92,17 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
 
         uint256 erc20BalanceAfter = IERC20(weETH).balanceOf(scw);
         assertEq(erc20BalanceAfter, erc20BalanceBefore - 1 ether);
+    }
+
+    function testWithdrawIntent_DRV() public onlyDeriveMainnet {
+        uint256 erc20BalanceBefore = IERC20(drv).balanceOf(scw);
+
+        vm.startPrank(executor);
+        bridgeIntent.executeWithdrawIntentLZ(scw, drv, 10 ether, validRecipient, 30184);
+        vm.stopPrank();
+
+        uint256 erc20BalanceAfter = IERC20(drv).balanceOf(scw);
+        assertEq(erc20BalanceAfter, erc20BalanceBefore - 10 ether);
     }
 
     receive() external payable {}

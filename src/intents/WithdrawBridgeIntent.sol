@@ -99,7 +99,7 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
         onlyIntentExecutor
     {
         IERC20(token).transferFrom(scw, address(this), amount);
-        IERC20(token).approve(address(SOCKET_BRIDGE), amount);
+        IERC20(token).approve(address(IOFT_BRIDGE), amount);
 
         // The auto execution can only be triggered if the fee is less than the max fee set by the user
         uint256 feeInToken = IOFT_BRIDGE.getFeeInToken(token, amount, destEID);
