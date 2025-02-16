@@ -20,7 +20,6 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
     /// @notice The maximum fee for a token for single withdraw
     mapping(address user => mapping(address token => uint256 maxFee)) public maxFee;
 
-    
     /// @notice The valid recipients for the withdraw intent
     mapping(address user => mapping(address recipient => bool isValid)) public validRecipients;
 

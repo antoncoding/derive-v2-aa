@@ -16,7 +16,6 @@ import {ILightAccount} from "src/interfaces/ILightAccount.sol";
  */
 
 contract FORK_LYRA_WithdrawBridgeIntent is Test {
-    
     address public weETH = address(0x7B35b4c05a90Ea5f311AeC815BE4148b446a68a2);
     address public drv = address(0x2EE0fd70756EDC663AcC9676658A1497C247693A);
 
@@ -54,7 +53,6 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
         // set executor as intent executor
         bridgeIntent.setIntentExecutor(executor, true);
 
-
         // scw approves bridgeIntent to spend weETH
         vm.startPrank(scw);
         IERC20(weETH).approve(address(bridgeIntent), type(uint256).max);
@@ -73,7 +71,9 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
         uint256 erc20BalanceBefore = IERC20(weETH).balanceOf(scw);
 
         vm.startPrank(executor);
-        bridgeIntent.executeWithdrawIntentSocket(scw, weETH, 1 ether, validRecipient, weETHController, weETHConnector, 200000);
+        bridgeIntent.executeWithdrawIntentSocket(
+            scw, weETH, 1 ether, validRecipient, weETHController, weETHConnector, 200000
+        );
         vm.stopPrank();
 
         uint256 erc20BalanceAfter = IERC20(weETH).balanceOf(scw);
