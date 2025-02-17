@@ -30,7 +30,6 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
 
     // Mock scws
     address public scw = address(0x8dC92fB0e1C1F1Def6e424E50aaA66dbB124eb54);
-    address public validRecipient = address(0xb0ba);
 
     WithdrawBridgeIntent public bridgeIntent;
 
@@ -58,36 +57,19 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
         IERC20(weETH).approve(address(bridgeIntent), type(uint256).max);
         IERC20(drv).approve(address(bridgeIntent), type(uint256).max);
 
-        // scw set max fee + recipient on bridgeintent
-        bridgeIntent.setMaxFee(weETH, 0.01 ether);
-        bridgeIntent.setMaxFee(drv, 5 ether); // 5 DRV
-
-        bridgeIntent.setValidRecipient(validRecipient, true);
-
         vm.stopPrank();
     }
 
     function testWithdrawIntent_weETH() public onlyDeriveMainnet {
-        uint256 erc20BalanceBefore = IERC20(weETH).balanceOf(scw);
-
-        vm.startPrank(executor);
-        bridgeIntent.executeWithdrawIntentSocket(
-            scw, weETH, 1 ether, validRecipient, weETHController, weETHConnector, 200000
-        );
-        vm.stopPrank();
-
-        uint256 erc20BalanceAfter = IERC20(weETH).balanceOf(scw);
-        assertEq(erc20BalanceAfter, erc20BalanceBefore - 1 ether);
-    }
-
-    function testWithdrawIntent_weETH_ToOwner() public onlyDeriveMainnet {
         // test we can withdraw to SCW owner
         address owner = ILightAccount(scw).owner();
 
         uint256 erc20BalanceBefore = IERC20(weETH).balanceOf(scw);
 
         vm.startPrank(executor);
-        bridgeIntent.executeWithdrawIntentSocket(scw, weETH, 1 ether, owner, weETHController, weETHConnector, 200000);
+        bridgeIntent.executeWithdrawIntentSocket(
+            scw, weETH, 1 ether, 0.1 ether, owner, weETHController, weETHConnector, 200000
+        );
         vm.stopPrank();
 
         uint256 erc20BalanceAfter = IERC20(weETH).balanceOf(scw);
@@ -97,8 +79,11 @@ contract FORK_LYRA_WithdrawBridgeIntent is Test {
     function testWithdrawIntent_DRV() public onlyDeriveMainnet {
         uint256 erc20BalanceBefore = IERC20(drv).balanceOf(scw);
 
+        uint256 maxFee = 10e18; // 10 DRV
+        address owner = ILightAccount(scw).owner();
+
         vm.startPrank(executor);
-        bridgeIntent.executeWithdrawIntentLZ(scw, drv, 10 ether, validRecipient, 30184);
+        bridgeIntent.executeWithdrawIntentLZ(scw, drv, 10 ether, maxFee, owner, 30184);
         vm.stopPrank();
 
         uint256 erc20BalanceAfter = IERC20(drv).balanceOf(scw);

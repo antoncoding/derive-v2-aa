@@ -9,19 +9,18 @@ import {IOFTWithdrawWrapper} from "../interfaces/derive/IOFTWithdrawWrapper.sol"
 
 /**
  * @title  WithdrawBridgeIntent
- * @notice A shared contract that allows authorized user to withdraw from LightAccount to off
+ * @notice A shared contract that allows executor to help users to withdraw tokens from LightAccount off Derive through bridges
  * @dev    Users who wish to have the auto-withdraw feature need to approve this contract to spend their tokens
+ *
+ * @dev    Trust Assumptions:
+ *         - Users must trust the executor not to arbitrarily execute withdrawals.
+ *         - Users must trust the owner to not add malicious executor
+ *         - Users rely on executors to provide a valid maxFee for each action to avoid being charged high fees by bridges.
  */
 contract WithdrawBridgeIntent is IntentExecutorBase {
     ISocketWithdrawWrapper public immutable SOCKET_BRIDGE;
 
     IOFTWithdrawWrapper public immutable IOFT_BRIDGE;
-
-    /// @notice The maximum fee for a token for single withdraw
-    mapping(address user => mapping(address token => uint256 maxFee)) public maxFee;
-
-    /// @notice The valid recipients for the withdraw intent
-    mapping(address user => mapping(address recipient => bool isValid)) public validRecipients;
 
     error InvalidRecipient();
     error FeeTooHigh();
@@ -39,10 +38,6 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
         address indexed scw, address indexed token, uint256 amount, address recipient, uint32 destEID
     );
 
-    event MaxFeeSet(address indexed user, address indexed token, uint256 maxFee);
-
-    event ValidRecipientSet(address indexed user, address indexed recipient, bool isValid);
-
     constructor(ISocketWithdrawWrapper _socketBridge, IOFTWithdrawWrapper _iOFTBridge) {
         SOCKET_BRIDGE = _socketBridge;
         IOFT_BRIDGE = _iOFTBridge;
@@ -54,7 +49,7 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
      * @param scw The light account address
      * @param token The ERC20 token address
      * @param amount The amount of tokens to withdraw
-     * @param recipient The recipient address, must be a valid recipient or the owner of the SCW
+     * @param recipient The recipient address, must specify explictly as the SCW owner
      * @param controller The Socket Controller address
      * @param connector The Socket Connector address
      */
@@ -62,6 +57,7 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
         address scw,
         address token,
         uint256 amount,
+        uint256 maxFee,
         address recipient,
         address controller,
         address connector,
@@ -71,11 +67,13 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
         IERC20(token).approve(address(SOCKET_BRIDGE), amount);
 
         // The auto execution can only be triggered if the fee is less than the max fee set by the user
-        uint256 feeInToken = SOCKET_BRIDGE.getFeeInToken(token, controller, connector, gasLimit);
-        if (feeInToken > maxFee[scw][token]) revert FeeTooHigh();
+        if (maxFee > 0) {
+            uint256 feeInToken = SOCKET_BRIDGE.getFeeInToken(token, controller, connector, gasLimit);
+            if (feeInToken > maxFee) revert FeeTooHigh();
+        }
 
-        // The recipient must be pre-approved, or be the owner of the SCW
-        if (!validRecipients[scw][recipient] && ILightAccount(scw).owner() != recipient) {
+        // The recipient must be the owner of the SCW
+        if (ILightAccount(scw).owner() != recipient) {
             revert InvalidRecipient();
         }
 
@@ -90,48 +88,34 @@ contract WithdrawBridgeIntent is IntentExecutorBase {
      * @param scw The light account address
      * @param token The ERC20 token address
      * @param amount The amount of tokens to withdraw
+     * @param maxFee The maximum fee for the withdraw bridge
      * @param recipient The recipient address, must be a valid recipient or the owner of the SCW
      * @param destEID The destination EID
      */
-    function executeWithdrawIntentLZ(address scw, address token, uint256 amount, address recipient, uint32 destEID)
-        external
-        onlyIntentExecutor
-    {
+    function executeWithdrawIntentLZ(
+        address scw,
+        address token,
+        uint256 amount,
+        uint256 maxFee,
+        address recipient,
+        uint32 destEID
+    ) external onlyIntentExecutor {
         IERC20(token).transferFrom(scw, address(this), amount);
         IERC20(token).approve(address(IOFT_BRIDGE), amount);
 
         // The auto execution can only be triggered if the fee is less than the max fee set by the user
-        uint256 feeInToken = IOFT_BRIDGE.getFeeInToken(token, amount, destEID);
-        if (feeInToken > maxFee[scw][token]) revert FeeTooHigh();
+        if (maxFee > 0) {
+            uint256 feeInToken = IOFT_BRIDGE.getFeeInToken(token, amount, destEID);
+            if (feeInToken > maxFee) revert FeeTooHigh();
+        }
 
-        // The recipient must be pre-approved, or be the owner of the SCW
-        if (!validRecipients[scw][recipient] && ILightAccount(scw).owner() != recipient) {
+        // The recipient must be the owner of the SCW
+        if (ILightAccount(scw).owner() != recipient) {
             revert InvalidRecipient();
         }
 
         IOFT_BRIDGE.withdrawToChain(token, amount, recipient, destEID);
 
         emit IntentWithdrawLZ(scw, token, amount, recipient, destEID);
-    }
-
-    /**
-     * @notice Set the maximum fee for a token for single withdraw
-     * @param token The token address
-     * @param _maxFee The maximum fee for the withdraw bridge
-     */
-    function setMaxFee(address token, uint256 _maxFee) external {
-        maxFee[msg.sender][token] = _maxFee;
-
-        emit MaxFeeSet(msg.sender, token, _maxFee);
-    }
-
-    /**
-     * @notice Set the valid recipient for all withdraw intent
-     * @param recipient The recipient address
-     */
-    function setValidRecipient(address recipient, bool isValid) external {
-        validRecipients[msg.sender][recipient] = isValid;
-
-        emit ValidRecipientSet(msg.sender, recipient, isValid);
     }
 }
