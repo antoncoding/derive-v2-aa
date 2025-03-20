@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// solhint-disable contract-name-camelcase
+// solhint-disable contract-name-camelcase func-name-mixedcase
 pragma solidity ^0.8.18;
 
 import {Test} from "lib/forge-std/src/Test.sol";
@@ -51,6 +51,8 @@ contract FORK_LYRA_SubaccountDepositIntent is Test {
 
         // set executor as intent executor
         depositIntent.setIntentExecutor(executor, true);
+
+        depositIntent.setAllowedDeriveAsset(DAIAsset, true);
     }
 
     function test_DepositIntent() public onlyDeriveMainnet {
@@ -74,6 +76,23 @@ contract FORK_LYRA_SubaccountDepositIntent is Test {
         vm.startPrank(executor);
         vm.expectRevert(SubaccountDepositIntent.SubaccountOwnerMismatch.selector);
         depositIntent.executeDepositIntent(user, invalidSubaccount, DAIAsset, 10 ether);
+        vm.stopPrank();
+    }
+
+    function test_RevertIf_DeriveAssetNotAllowed() public onlyDeriveMainnet {
+        address mockedDeriveAsset = address(0x123);
+
+        vm.startPrank(executor);
+        vm.expectRevert(SubaccountDepositIntent.DeriveAssetNotAllowed.selector);
+        depositIntent.executeDepositIntent(user, subaccountId, mockedDeriveAsset, 10 ether);
+        vm.stopPrank();
+    }
+
+    function test_RevertIf_AllowDeriveAsset_CallByExecutor() public onlyDeriveMainnet {
+        // executor cannot call setAllowedDeriveAsset
+        vm.startPrank(executor);
+        vm.expectRevert(bytes("Ownable: caller is not the owner"));
+        depositIntent.setAllowedDeriveAsset(DAIAsset, true);
         vm.stopPrank();
     }
 

@@ -19,8 +19,14 @@ contract SubaccountDepositIntent is IntentExecutorBase {
     IMatching public immutable MATCHING;
 
     error SubaccountOwnerMismatch();
+    error DeriveAssetNotAllowed();
 
     event IntentDeposit(uint256 indexed subaccountId, address indexed scw, address indexed token, uint256 amount);
+
+    event AllowedDeriveAssetSet(address indexed deriveAsset, bool indexed allowed);
+
+    // Derive v2 asset addresses that are allowed to be deposited for intent executors
+    mapping(address => bool) public allowedDeriveAsset;
 
     constructor(IMatching _matching) {
         MATCHING = _matching;
@@ -40,6 +46,9 @@ contract SubaccountDepositIntent is IntentExecutorBase {
         // Can only deposit to subaccounts that are owned by the SCW
         _verifySubaccountOwner(subaccountId, scw);
 
+        // Can only deposit to derive v2 assets that are allowed
+        if (!allowedDeriveAsset[deriveAsset]) revert DeriveAssetNotAllowed();
+
         IERC20 token = IERC20BasedAsset(deriveAsset).wrappedAsset();
         token.safeTransferFrom(scw, address(this), amount);
         token.safeApprove(address(deriveAsset), amount);
@@ -56,5 +65,16 @@ contract SubaccountDepositIntent is IntentExecutorBase {
      */
     function _verifySubaccountOwner(uint256 subaccountId, address scw) internal view {
         if (MATCHING.subAccountToOwner(subaccountId) != scw) revert SubaccountOwnerMismatch();
+    }
+
+    /**
+     * @notice Set the allowed derive v2 asset
+     * @param deriveAsset The derive v2 asset address
+     * @param allowed Whether the derive v2 asset is allowed
+     */
+    function setAllowedDeriveAsset(address deriveAsset, bool allowed) external onlyOwner {
+        allowedDeriveAsset[deriveAsset] = allowed;
+
+        emit AllowedDeriveAssetSet(deriveAsset, allowed);
     }
 }
