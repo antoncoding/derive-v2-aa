@@ -8,4 +8,6 @@ import {IERC721} from "lib/openzeppelin-contracts/contracts/token/ERC721/IERC721
 
 interface ISubaccounts is IERC721 {
     function getBalance(uint256 subaccountId, address asset, uint256 subId) external view returns (uint256);
+
+    function manager(uint256 subaccountId) external view returns (address);
 }

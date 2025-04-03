@@ -3,4 +3,6 @@ pragma solidity ^0.8.18;
 
 interface IMatching {
     function subAccountToOwner(uint256 subAccountId) external view returns (address);
+
+    function subAccounts() external view returns (address);
 }

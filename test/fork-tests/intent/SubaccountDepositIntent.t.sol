@@ -7,7 +7,7 @@ import {Test} from "lib/forge-std/src/Test.sol";
 import {SubaccountDepositIntent} from "src/intents/SubaccountDepositIntent.sol";
 import {IntentExecutorBase} from "src/intents/IntentExecutorBase.sol";
 import {IERC20} from "../../../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {ISubaccounts} from "./interfaces/ISubaccounts.sol";
+import {ISubaccounts} from "../../../src/interfaces/ISubaccounts.sol";
 import {IMatching} from "src/interfaces/derive/IMatching.sol";
 
 /**
@@ -24,8 +24,9 @@ contract FORK_LYRA_SubaccountDepositIntent is Test {
     IMatching public matching = IMatching(0xeB8d770ec18DB98Db922E9D83260A585b9F0DeAD);
     ISubaccounts public subaccounts = ISubaccounts(0xE7603DF191D699d8BD9891b821347dbAb889E5a5);
 
-    // Mock light account address: owner of Subaccount 1
+    // Mock light account address: owner of Subaccount 15 (Standard Manager)
     uint256 public subaccountId = 15;
+    address public standardManager = address(0x28c9ddF9A3B29c2E6a561c1BC520954e5A33de5D);
     address public user = address(0x03CdE1E0bc6C1e096505253b310Cf454b0b462FB);
 
     SubaccountDepositIntent public depositIntent;
@@ -52,7 +53,10 @@ contract FORK_LYRA_SubaccountDepositIntent is Test {
         // set executor as intent executor
         depositIntent.setIntentExecutor(executor, true);
 
-        depositIntent.setAllowedDeriveAsset(DAIAsset, true);
+        // set DAIAsset as allowed derive asset
+        depositIntent.setManagerTypes(
+            0x28c9ddF9A3B29c2E6a561c1BC520954e5A33de5D, SubaccountDepositIntent.ManagerType.Standard
+        );
     }
 
     function test_DepositIntent() public onlyDeriveMainnet {
@@ -92,7 +96,7 @@ contract FORK_LYRA_SubaccountDepositIntent is Test {
         // executor cannot call setAllowedDeriveAsset
         vm.startPrank(executor);
         vm.expectRevert(bytes("Ownable: caller is not the owner"));
-        depositIntent.setAllowedDeriveAsset(DAIAsset, true);
+        depositIntent.setManagerTypes(standardManager, SubaccountDepositIntent.ManagerType.PM2);
         vm.stopPrank();
     }
 
