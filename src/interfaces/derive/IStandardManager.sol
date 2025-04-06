@@ -16,4 +16,6 @@ interface IStandardManager {
     }
 
     function assetDetails(address asset) external view returns (AssetDetail memory);
+
+    function settlePerpsWithIndex(uint256 subaccountId) external;
 }

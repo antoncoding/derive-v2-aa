@@ -5,4 +5,6 @@ interface IMatching {
     function subAccountToOwner(uint256 subAccountId) external view returns (address);
 
     function subAccounts() external view returns (address);
+
+    function createSubAccount(address manager) external returns (uint256);
 }

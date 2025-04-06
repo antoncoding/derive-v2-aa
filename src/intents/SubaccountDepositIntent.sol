@@ -18,8 +18,14 @@ import {SafeERC20} from "../../lib/openzeppelin-contracts/contracts/token/ERC20/
 contract SubaccountDepositIntent is IntentExecutorBase {
     using SafeERC20 for IERC20;
 
+    /// @dev The matching contract user deposits their subaccounts into to trade on Derive.
     IMatching public immutable MATCHING;
+
+    /// @dev Derive Subaccounts
     ISubaccounts public immutable SUBACCOUNTS;
+
+    /// @dev Special derive asset that's the base unit of the manager accounting system.
+    address public immutable CASH;
 
     error SubaccountOwnerMismatch();
     error DeriveAssetNotAllowed();
@@ -37,10 +43,12 @@ contract SubaccountDepositIntent is IntentExecutorBase {
     // Derive v2 asset addresses that are allowed to be deposited for intent executors
     mapping(address manager => ManagerType) public managerTypes;
 
-    constructor(IMatching _matching) {
+    constructor(IMatching _matching, address _cash) {
         MATCHING = _matching;
 
         SUBACCOUNTS = ISubaccounts(_matching.subAccounts());
+
+        CASH = _cash;
     }
 
     /**
@@ -97,6 +105,8 @@ contract SubaccountDepositIntent is IntentExecutorBase {
      * @param deriveAsset address of the derive asset
      */
     function _isAllowedDeriveAsset(uint256 subaccountId, address deriveAsset) internal view returns (bool) {
+        if (deriveAsset == CASH) return true;
+
         address manager = SUBACCOUNTS.manager(subaccountId);
 
         ManagerType managerType = managerTypes[manager];
