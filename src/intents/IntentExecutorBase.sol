@@ -44,7 +44,6 @@ abstract contract IntentExecutorBase is Ownable {
      * @param token The address of the token to rescue
      */
     function rescueToken(address token) external onlyOwner {
-
         // intentionally ignore return value
         address(token).call(abi.encodeWithSignature("transfer(address,uint256)", msg.sender, IERC20(token).balanceOf(address(this))));
     }
